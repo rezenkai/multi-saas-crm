@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Backend API (минимальная версия)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: salesforce_backend_minimal
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./salesforce_clone.db
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - SECRET_KEY=dev-secret-key-change-in-production
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
+    networks:
+      - salesforce_network_minimal
+    # Ограничение памяти
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --workers 1
+
+volumes:
+  backend_data:
+
+networks:
+  salesforce_network_minimal:
+    driver: bridge 

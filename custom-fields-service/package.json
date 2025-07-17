@@ -1,0 +1,42 @@
+{
+  "name": "custom-fields-service",
+  "version": "1.0.0",
+  "description": "Custom Fields Service for Multi-SaaS Platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "keywords": ["custom-fields", "metadata", "multi-saas"],
+  "author": "Multi-SaaS Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "winston": "^3.11.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "redis": "^4.6.10",
+    "uuid": "^9.0.1",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.4",
+    "@types/pg": "^8.10.7",
+    "@types/uuid": "^9.0.7",
+    "@types/lodash": "^4.14.202",
+    "typescript": "^5.3.3",
+    "tsx": "^4.6.2",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

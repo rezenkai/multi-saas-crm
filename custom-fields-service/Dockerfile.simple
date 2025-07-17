@@ -1,0 +1,28 @@
+# Simple Dockerfile for testing
+FROM node:18-alpine
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S customfields -u 1001
+
+# Change ownership
+RUN chown -R customfields:nodejs /app
+USER customfields
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:${PORT:-8009}/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Expose port
+EXPOSE 8009
+
+# Start with simplified version for testing
+CMD ["npx", "tsx", "src/index-simple.ts"]

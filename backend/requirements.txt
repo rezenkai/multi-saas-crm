@@ -1,0 +1,64 @@
+# FastAPI и веб-фреймворк
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# База данных
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Redis и кеширование
+redis==5.0.1
+aioredis==2.0.1
+
+# Аутентификация и безопасность
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-decouple==3.8
+
+# Валидация данных
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# HTTP клиент
+httpx==0.25.2
+aiohttp==3.9.1
+
+# Утилиты
+python-dateutil==2.8.2
+pytz==2023.3
+email-validator==2.1.0
+
+# Логирование
+structlog==23.2.0
+
+# Тестирование
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Разработка
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Мониторинг
+prometheus-client==0.19.0
+
+# Email
+aiosmtplib==3.0.1
+
+# SMS (Twilio)
+twilio==8.10.0
+
+# Elasticsearch
+elasticsearch==8.11.0
+
+# Kafka
+aiokafka==0.9.0
+
+# Celery для асинхронных задач
+celery==5.3.4 

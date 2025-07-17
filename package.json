@@ -1,0 +1,57 @@
+{
+  "name": "salesforce-clone",
+  "version": "1.0.0",
+  "description": "Full-stack Salesforce Clone CRM System",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "npm run start:production",
+    "start:production": "docker-compose up -d",
+    "start:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "start:minimal": "docker-compose -f docker-compose.minimal.yml up -d",
+    "stop": "docker-compose down",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && pip install -r requirements.txt",
+    "setup": "npm run install:all && npm run start:dev",
+    "test": "cd backend && python -m pytest",
+    "test:frontend": "cd frontend && npm run test",
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "typecheck": "cd frontend && npm run type-check",
+    "clean": "docker-compose down -v && docker system prune -f",
+    "logs": "docker-compose logs -f",
+    "logs:backend": "docker-compose logs -f backend",
+    "logs:frontend": "docker-compose logs -f frontend"
+  },
+  "keywords": [
+    "crm",
+    "salesforce",
+    "fastapi",
+    "nextjs",
+    "typescript",
+    "postgresql",
+    "redis",
+    "elasticsearch",
+    "kafka"
+  ],
+  "author": "CRM Development Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/salesforce-clone.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/salesforce-clone/issues"
+  },
+  "homepage": "https://github.com/your-org/salesforce-clone#readme"
+}

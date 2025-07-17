@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_EXPIRES_IN=24h
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CORS_ORIGIN=http://localhost:3000
+      - AUTH_SERVICE_URL=http://host.docker.internal:8000
+      - USERS_SERVICE_URL=http://host.docker.internal:8000
+      - CONTACTS_SERVICE_URL=http://host.docker.internal:8000
+      - COMPANIES_SERVICE_URL=http://host.docker.internal:8000
+      - OPPORTUNITIES_SERVICE_URL=http://host.docker.internal:8000
+      - DASHBOARD_SERVICE_URL=http://host.docker.internal:8000
+      - ERP_SERVICE_URL=http://host.docker.internal:8001
+      - MARKETING_SERVICE_URL=http://host.docker.internal:8002
+      - PLUGINS_SERVICE_URL=http://host.docker.internal:8003
+      - LOG_LEVEL=info
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./logs:/app/logs
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

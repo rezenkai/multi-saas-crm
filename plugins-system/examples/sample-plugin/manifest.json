@@ -1,0 +1,95 @@
+{
+  "id": "sample-crm-extension",
+  "name": "Sample CRM Extension",
+  "version": "1.0.0",
+  "description": "A sample plugin demonstrating CRM integration capabilities",
+  "author": "Multi-SaaS Team",
+  "email": "plugins@multi-saas.com",
+  "website": "https://multi-saas.com/plugins/sample-crm-extension",
+  "license": "MIT",
+  "main": "index.js",
+  "platformVersion": "^1.0.0",
+  "dependencies": {
+    "advanced-analytics": "^2.0.0"
+  },
+  "permissions": [
+    "read:contacts",
+    "write:contacts",
+    "read:opportunities",
+    "send:email",
+    "access:hooks",
+    "access:storage"
+  ],
+  "hooks": [
+    "after:create:contact",
+    "after:update:opportunity",
+    "dashboard:render"
+  ],
+  "api": {
+    "/analytics": {
+      "method": "GET",
+      "handler": "getAnalytics",
+      "permissions": ["read:dashboard"]
+    },
+    "/sync": {
+      "method": "POST",
+      "handler": "syncData",
+      "permissions": ["write:contacts"]
+    }
+  },
+  "settings": [
+    {
+      "key": "apiKey",
+      "type": "string",
+      "label": "API Key",
+      "description": "Your external service API key",
+      "required": true
+    },
+    {
+      "key": "enableNotifications",
+      "type": "boolean",
+      "label": "Enable Notifications",
+      "description": "Send notifications on data changes",
+      "default": true
+    },
+    {
+      "key": "syncInterval",
+      "type": "select",
+      "label": "Sync Interval",
+      "description": "How often to sync data",
+      "default": "hourly",
+      "options": [
+        { "value": "realtime", "label": "Real-time" },
+        { "value": "hourly", "label": "Every hour" },
+        { "value": "daily", "label": "Daily" },
+        { "value": "weekly", "label": "Weekly" }
+      ]
+    },
+    {
+      "key": "syncFields",
+      "type": "multiselect",
+      "label": "Fields to Sync",
+      "description": "Select which fields to synchronize",
+      "default": ["name", "email"],
+      "options": [
+        { "value": "name", "label": "Name" },
+        { "value": "email", "label": "Email" },
+        { "value": "phone", "label": "Phone" },
+        { "value": "company", "label": "Company" },
+        { "value": "notes", "label": "Notes" }
+      ]
+    }
+  ],
+  "assets": [
+    "styles.css",
+    "dashboard-widget.html",
+    "icon.png"
+  ],
+  "tags": ["crm", "analytics", "sync", "dashboard"],
+  "category": "productivity",
+  "icon": "icon.png",
+  "screenshots": [
+    "screenshot1.png",
+    "screenshot2.png"
+  ]
+}

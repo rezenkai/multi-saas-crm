@@ -1,0 +1,38 @@
+# Simple Dockerfile for OAuth2 Service
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p logs
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S oauth2user -u 1001
+
+# Change ownership
+RUN chown -R oauth2user:nodejs /app
+USER oauth2user
+
+# Expose port
+EXPOSE 8010
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8010/health || exit 1
+
+# Set environment
+ENV NODE_ENV=development
+
+# Start with tsx for development
+CMD ["npx", "tsx", "src/index.ts"]

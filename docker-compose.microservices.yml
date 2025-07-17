@@ -1,0 +1,399 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: multisaas
+      POSTGRES_USER: multisaas
+      POSTGRES_PASSWORD: multisaas_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Kafka
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    ports:
+      - "9092:9092"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Zookeeper (for Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+      - auth-service
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - JWT_SECRET=your-secret-key-change-in-production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CORS_ORIGIN=http://localhost:3000
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - USERS_SERVICE_URL=http://users-service:8001
+      - CONTACTS_SERVICE_URL=http://contacts-service:8002
+      - COMPANIES_SERVICE_URL=http://companies-service:8003
+      - OPPORTUNITIES_SERVICE_URL=http://opportunities-service:8004
+      - DASHBOARD_SERVICE_URL=http://dashboard-service:8005
+      - ERP_SERVICE_URL=http://erp-service:8006
+      - MARKETING_SERVICE_URL=http://marketing-service:8007
+      - PLUGINS_SERVICE_URL=http://plugins-service:8008
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=auth-service
+      - SERVICE_PORT=8000
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Users Service
+  users-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=users-service
+      - SERVICE_PORT=8001
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Contacts Service
+  contacts-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=contacts-service
+      - SERVICE_PORT=8002
+    ports:
+      - "8002:8002"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Companies Service
+  companies-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=companies-service
+      - SERVICE_PORT=8003
+    ports:
+      - "8003:8003"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Opportunities Service
+  opportunities-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=opportunities-service
+      - SERVICE_PORT=8004
+    ports:
+      - "8004:8004"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Dashboard Service
+  dashboard-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=dashboard-service
+      - SERVICE_PORT=8005
+    ports:
+      - "8005:8005"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # ERP Service
+  erp-service:
+    build:
+      context: ./erp-service
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=erp-service
+      - SERVICE_PORT=8006
+    ports:
+      - "8006:8006"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Marketing Service
+  marketing-service:
+    build:
+      context: ./marketing-service
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:29092
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=marketing-service
+      - SERVICE_PORT=8007
+    ports:
+      - "8007:8007"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Plugins Service
+  plugins-service:
+    build:
+      context: ./plugins-system
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-secret-key-change-in-production
+      - SERVICE_NAME=plugins-service
+      - SERVICE_PORT=8008
+    ports:
+      - "8008:8008"
+    volumes:
+      - plugins_data:/app/plugins
+      - plugins_uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - api-gateway
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3001
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  # Logging
+  elasticsearch-log:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_log_data:/usr/share/elasticsearch/data
+    ports:
+      - "9201:9200"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    depends_on:
+      - elasticsearch-log
+    volumes:
+      - ./infrastructure/logging/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    depends_on:
+      - elasticsearch-log
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch-log:9200
+    ports:
+      - "5601:5601"
+    restart: unless-stopped
+    networks:
+      - multisaas-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  elasticsearch_log_data:
+  kafka_data:
+  zookeeper_data:
+  plugins_data:
+  plugins_uploads:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  multisaas-network:
+    driver: bridge

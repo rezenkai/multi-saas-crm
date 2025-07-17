@@ -1,0 +1,20 @@
+# Simple Dockerfile for testing
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Create directories for plugins
+RUN mkdir -p plugins uploads
+
+# Expose port
+EXPOSE 8008
+
+# Start the simple test server
+CMD ["node", "test-simple.js"]

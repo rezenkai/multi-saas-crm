@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Analytics Widget</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="sample-analytics-widget">
+        <div class="widget-header">
+            <h3>Sample Analytics</h3>
+            <span class="widget-icon">📊</span>
+        </div>
+        
+        <div class="widget-content">
+            <div class="metric">
+                <div class="metric-value">{{data.totalContacts}}</div>
+                <div class="metric-label">Total Contacts</div>
+            </div>
+            
+            <div class="metric">
+                <div class="metric-value">{{data.totalOpportunities}}</div>
+                <div class="metric-label">Opportunities</div>
+            </div>
+            
+            <div class="metric">
+                <div class="metric-value">{{data.conversionRate}}%</div>
+                <div class="metric-label">Conversion Rate</div>
+            </div>
+        </div>
+        
+        <div class="widget-footer">
+            <div class="last-sync">
+                Last sync: {{data.lastSync | date}}
+            </div>
+            <button class="sync-button" onclick="syncData()">
+                Sync Now
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        function syncData() {
+            // Call plugin API to sync data
+            fetch('/api/v1/plugins/sample-crm-extension/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                body: JSON.stringify({
+                    type: 'contacts',
+                    data: [] // This would contain actual data
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Data synchronized successfully!');
+                    location.reload();
+                } else {
+                    alert('Sync failed: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Sync error:', error);
+                alert('Sync failed: ' + error.message);
+            });
+        }
+        
+        // Auto-refresh every 5 minutes
+        setInterval(() => {
+            location.reload();
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

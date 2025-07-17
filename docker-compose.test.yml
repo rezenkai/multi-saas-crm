@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: multisaas
+      POSTGRES_USER: multisaas
+      POSTGRES_PASSWORD: multisaas_password
+    ports:
+      - "5432:5432"
+    networks:
+      - multisaas-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - multisaas-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - JWT_SECRET=test-secret-key
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "3001:3001"
+    networks:
+      - multisaas-network
+
+  # Existing CRM Backend (Auth Service)
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=test-secret-key
+    ports:
+      - "8000:8000"
+    networks:
+      - multisaas-network
+
+  # Plugin System
+  plugins-service:
+    build:
+      context: ./plugins-system
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://multisaas:multisaas_password@postgres:5432/multisaas
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=test-secret-key
+      - SERVICE_PORT=8008
+    ports:
+      - "8008:8008"
+    networks:
+      - multisaas-network
+
+  # ERP Service (placeholder)
+  erp-service:
+    build:
+      context: ./erp-service
+      dockerfile: Dockerfile
+    environment:
+      - SERVICE_PORT=8006
+    ports:
+      - "8006:8006"
+    networks:
+      - multisaas-network
+
+  # Marketing Service (placeholder)
+  marketing-service:
+    build:
+      context: ./marketing-service
+      dockerfile: Dockerfile
+    environment:
+      - SERVICE_PORT=8007
+    ports:
+      - "8007:8007"
+    networks:
+      - multisaas-network
+
+networks:
+  multisaas-network:
+    driver: bridge
