@@ -29,4 +29,5 @@ interface CompanyRepository : JpaRepository<CompanyEntity, UUID> {
 
     @Query("SELECT c FROM CompanyEntity c WHERE c.tenantId = :tenantId AND c.isActive = true")
     fun findActiveByTenantId(@Param("tenantId") tenantId: UUID): List<CompanyEntity>
+    fun existsByTenantIdAndEmail(tenantId: UUID, email: String): Boolean
 }
