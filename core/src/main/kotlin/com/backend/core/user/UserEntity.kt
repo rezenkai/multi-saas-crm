@@ -33,6 +33,7 @@ data class UserEntity(
     @Column(name = "last_name")
     val lastName: String? = null,
 
+    // Profile fields
     @Column(name = "avatar_url")
     val avatarUrl: String? = null,
 
@@ -43,6 +44,7 @@ data class UserEntity(
     @Column(columnDefinition = "TEXT")
     val bio: String? = null,
 
+    // Settings
     val timezone: String = "UTC",
     val locale: String = "en",
     val theme: String = "light",
@@ -59,6 +61,7 @@ data class UserEntity(
     @Column(name = "marketing_notifications")
     val marketingNotifications: Boolean = false,
 
+    // Status fields
     @Column(name = "is_active")
     val isActive: Boolean = true,
 
@@ -68,6 +71,22 @@ data class UserEntity(
     @Column(name = "is_superuser")
     val isSuperuser: Boolean = false,
 
+    // 2FA fields
+    @Column(name = "two_factor_enabled")
+    val twoFactorEnabled: Boolean = false,
+
+    @JsonIgnore
+    @Column(name = "two_factor_secret")
+    val twoFactorSecret: String? = null,
+
+    @JsonIgnore
+    @Column(name = "backup_codes", columnDefinition = "TEXT")
+    val backupCodes: String? = null, // JSON array of backup codes
+
+    @Column(name = "two_factor_verified_at")
+    val twoFactorVerifiedAt: LocalDateTime? = null,
+
+    // Security fields
     @JsonIgnore
     @Column(name = "failed_login_attempts")
     val failedLoginAttempts: Int = 0,

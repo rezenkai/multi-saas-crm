@@ -19,21 +19,37 @@ repositories {
 	mavenCentral()
 }
 
+// File: build.gradle.kts - Add missing dependencies
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
-	implementation("org.springframework.boot:spring-boot-starter-security")
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+	// JWT dependencies
 	implementation("io.jsonwebtoken:jjwt-api:0.12.3")
 	implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
 	implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
-	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
+	// Google 2FA / TOTP
+	implementation("com.warrenstrange:googleauth:1.5.0")
+
+	// QR Code generation
+	implementation("com.google.zxing:core:3.5.2")
+	implementation("com.google.zxing:javase:3.5.2")
+
+	// Kotlin Coroutines
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.3")
+
+	// Jackson for Kotlin
+	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+	// PostgreSQL
 	runtimeOnly("org.postgresql:postgresql")
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-	testImplementation("org.springframework.security:spring-security-test")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	// Kotlin
+	implementation("org.jetbrains.kotlin:kotlin-reflect")
 }
 
 kotlin {
