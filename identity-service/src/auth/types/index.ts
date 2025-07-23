@@ -1,11 +1,5 @@
 import { Transform } from 'class-transformer';
-import {
-  IsEmail,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 // DTOs
 export class LoginDto {
@@ -18,8 +12,8 @@ export class LoginDto {
   password: string;
 
   @IsOptional()
-  @IsNumber()
-  twoFactorCode?: number;
+  // Allow either number (TOTP) or string (backup codes) - don't transform
+  twoFactorCode?: number | string;
 
   @IsOptional()
   @IsString()
