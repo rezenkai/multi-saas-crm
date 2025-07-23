@@ -193,3 +193,4 @@ files/
 # Conversation files (temporary)
 conversation*.txt
 PROGRESS.md
+migration_plan.md
