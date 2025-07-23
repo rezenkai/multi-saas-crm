@@ -169,11 +169,12 @@ export class JwtService {
       return {
         sub: payload.sub,
         email: payload.sub, // In Kotlin, sub is the email
-        tenantId: payload.tenant_id,
-        role: payload.role,
+        tenantId: payload.tenant_id || 'default-tenant', // Map from tenant_id
+        role: payload.role || 'user',
         iat: payload.iat,
         exp: payload.exp,
         type: payload.type,
+        jti: payload.jti,
       };
     } catch (error) {
       throw new InvalidTokenException('Invalid or expired refresh token');
