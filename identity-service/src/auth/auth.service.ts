@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { TwoFactorService } from '../two-factor/two-factor.service';
 import { UserService } from '../user/user.service';
 import { JwtService } from './jwt.service';
 import {
@@ -22,6 +23,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
 
   async login(loginDto: LoginDto): Promise<TokenPair> {
@@ -71,11 +73,24 @@ export class AuthService {
           );
         }
 
-        // TODO: Implement 2FA verification when we create TwoFactorService
-        // For now, we'll skip 2FA verification
+        // Verify 2FA code using TwoFactorService
         console.log(
-          `2FA code provided: ${twoFactorCode} (verification not implemented yet)`,
+          `Raw 2FA code received: ${twoFactorCode}, type: ${typeof twoFactorCode}`,
         );
+
+        // Pass the code as-is to TwoFactorService
+        const isValid2FA = await this.twoFactorService.verifyTwoFactorCode(
+          user.id,
+          twoFactorCode,
+        );
+        if (!isValid2FA) {
+          console.log(`Invalid 2FA code for user: ${email}`);
+          throw new InvalidCredentialsException(
+            'Invalid two-factor authentication code',
+          );
+        }
+
+        console.log(`2FA verification successful for user: ${email}`);
       }
 
       // Step 5: Reset failed login attempts and update last login
