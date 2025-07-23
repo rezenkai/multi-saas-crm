@@ -19,7 +19,6 @@ repositories {
 	mavenCentral()
 }
 
-// File: build.gradle.kts - Add missing dependencies
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-security")
@@ -31,16 +30,11 @@ dependencies {
 	implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
 	implementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
-	// Google 2FA / TOTP
-	implementation("com.warrenstrange:googleauth:1.5.0")
-
-	// QR Code generation
-	implementation("com.google.zxing:core:3.5.2")
-	implementation("com.google.zxing:javase:3.5.2")
-
 	// Kotlin Coroutines
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.7.3")
+
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
 	// Jackson for Kotlin
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
