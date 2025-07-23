@@ -176,27 +176,59 @@ export class AuthService {
     const { refreshToken } = refreshTokenDto;
 
     try {
+      console.log(
+        `Refresh token attempt with token: ${refreshToken.substring(0, 20)}...`,
+      );
+
       // Verify refresh token
       const payload = this.jwtService.verifyRefreshToken(refreshToken);
+      console.log(`Token payload:`, {
+        sub: payload.sub,
+        tenantId: payload.tenantId,
+        role: payload.role,
+        type: payload.type,
+      });
 
-      // Find user
-      const user = await this.userService.findById(payload.sub);
-      if (!user || !user.isActive) {
+      // Find user by email (since sub contains email in our implementation)
+      const user = await this.userService.findByEmail(payload.sub);
+      if (!user) {
+        console.log(`User not found for email: ${payload.sub}`);
+        throw new UnauthorizedException('User not found');
+      }
+
+      if (!user.isActive) {
+        console.log(`User is not active: ${payload.sub}`);
         throw new UnauthorizedException('User not found or inactive');
       }
 
+      console.log(`User found: ${user.email}, isActive: ${user.isActive}`);
+
       // Validate refresh token against user
       if (!this.jwtService.isRefreshTokenValid(refreshToken, user)) {
+        console.log(`Invalid refresh token for user: ${user.email}`);
         throw new UnauthorizedException('Invalid refresh token');
       }
 
       // Generate new token pair
-      return this.jwtService.generateTokenPair(
+      console.log(
+        `Generating new token pair for user: ${user.email}, tenant: ${payload.tenantId}, role: ${payload.role}`,
+      );
+      const newTokenPair = this.jwtService.generateTokenPair(
         user,
         payload.tenantId,
         payload.role,
       );
+
+      console.log(`Refresh successful for user: ${user.email}`);
+      return newTokenPair;
     } catch (error) {
+      console.error(`Refresh token error:`, error.message);
+
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      console.error(`Unexpected refresh error:`, error);
       throw new UnauthorizedException('Failed to refresh token');
     }
   }
