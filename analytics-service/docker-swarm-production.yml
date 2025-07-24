@@ -1,0 +1,411 @@
+# Docker Swarm Production Configuration for Analytics Service
+# Usage: docker stack deploy -c docker-swarm-production.yml analytics-stack
+
+version: '3.8'
+
+services:
+  # Analytics Service - Multiple instances with load balancing
+  analytics-service:
+    image: analytics-service:latest
+    ports:
+      - "8005:8000"
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - DATABASE_HOST=postgres-analytics
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=salesforce_clone
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=password
+      - REDIS_HOST=redis-analytics
+      - REDIS_PORT=6379
+      - CLICKHOUSE_HOST=clickhouse-analytics
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DATABASE=crm_analytics
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+      - JWT_SECRET=bXlfc2VjcmV0X2tleV9mb3Jfand0X3Rva2Vux2dlbmVyYXRpb25fMTIzNDU2Nzg5MA==
+      - LOG_LEVEL=INFO
+      - LOG_DIR=/app/logs
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      placement:
+        constraints:
+          - node.role == worker
+    volumes:
+      - analytics-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ML/AI Service - Multiple instances for ML workloads
+  ml-ai-service:
+    image: ml-ai-service:latest
+    ports:
+      - "8007:8007"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse-analytics
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+      - CLICKHOUSE_DATABASE=crm_analytics
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 30s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+      placement:
+        constraints:
+          - node.role == worker
+          - node.labels.gpu == true  # For GPU-accelerated ML
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+
+  # Load Balancer - Nginx with high availability
+  nginx-analytics:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+      - "8443:443"  # HTTPS support
+    volumes:
+      - ./nginx/load-balancer.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # SSL certificates
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+      placement:
+        constraints:
+          - node.role == manager
+    depends_on:
+      - analytics-service
+      - ml-ai-service
+
+  # PostgreSQL - Master-Slave replication for HA
+  postgres-master:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=salesforce_clone
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_REPLICATION_USER=replicator
+      - POSTGRES_REPLICATION_PASSWORD=rep_pass
+    volumes:
+      - postgres-master-data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+      placement:
+        constraints:
+          - node.role == manager
+          - node.labels.storage == ssd
+
+  postgres-replica:
+    image: postgres:13
+    environment:
+      - PGUSER=postgres
+      - POSTGRES_PASSWORD=password
+      - PGPASSWORD=rep_pass
+      - POSTGRES_MASTER_SERVICE=postgres-master
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    depends_on:
+      - postgres-master
+
+  # ClickHouse Cluster for analytics
+  clickhouse-shard1:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    environment:
+      - CLICKHOUSE_DB=crm_analytics
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+    volumes:
+      - clickhouse-shard1-data:/var/lib/clickhouse
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.storage == ssd
+
+  clickhouse-shard2:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    environment:
+      - CLICKHOUSE_DB=crm_analytics
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+    volumes:
+      - clickhouse-shard2-data:/var/lib/clickhouse
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+      placement:
+        constraints:
+          - node.labels.storage == ssd
+
+  # Redis Cluster for caching and sessions
+  redis-master:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --replica-read-only no
+    volumes:
+      - redis-master-data:/data
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  redis-replica:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --replicaof redis-master 6379
+    volumes:
+      - redis-replica-data:/data
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    depends_on:
+      - redis-master
+
+  # Grafana for monitoring
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_INSTALL_PLUGINS=clickhouse-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Apache Superset for BI
+  superset:
+    image: apache/superset:latest
+    environment:
+      - SUPERSET_SECRET_KEY=your-secret-key-here
+    volumes:
+      - superset-data:/app/superset_home
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  # Monitoring and Logging
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # Backup Service
+  backup-service:
+    image: backup-service:latest
+    environment:
+      - POSTGRES_HOST=postgres-master
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - CLICKHOUSE_HOST=clickhouse-shard1
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+    volumes:
+      - backup-data:/app/backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - analytics-network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  analytics-network:
+    driver: overlay
+    attachable: true
+    ipam:
+      config:
+        - subnet: 10.0.9.0/24
+
+volumes:
+  postgres-master-data:
+    driver: local
+  postgres-replica-data:
+    driver: local
+  clickhouse-shard1-data:
+    driver: local
+  clickhouse-shard2-data:
+    driver: local
+  redis-master-data:
+    driver: local
+  redis-replica-data:
+    driver: local
+  grafana-data:
+    driver: local
+  superset-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  backup-data:
+    driver: local
+  analytics-logs:
+    driver: local
+
+configs:
+  nginx_config:
+    file: ./nginx/load-balancer.conf
+  prometheus_config:
+    file: ./monitoring/prometheus.yml
+
+secrets:
+  postgres_password:
+    external: true
+  clickhouse_password:
+    external: true
+  jwt_secret:
+    external: true

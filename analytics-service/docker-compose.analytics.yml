@@ -1,0 +1,391 @@
+# Docker Compose для полной Analytics системы
+
+services:
+  # Analytics Service
+  analytics-service:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8000"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      
+      # Database (подключение к PostgreSQL контейнеру)
+      - DB_HOST=postgres-analytics-fresh
+      - DB_PORT=5432
+      - DB_NAME=salesforce_clone
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      
+      # Redis
+      - REDIS_HOST=redis-analytics
+      - REDIS_PORT=6379
+      - REDIS_DB=1
+      
+      # Analytics Settings
+      - ANALYTICS_ENABLED=true
+      - CLICKHOUSE_HOST=clickhouse-analytics
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DB=crm_analytics
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+      
+      # Analytics Configuration
+      - ANALYTICS_BATCH_SIZE=100
+      - ANALYTICS_FLUSH_INTERVAL=10000
+      - METRICS_REFRESH_INTERVAL=60000
+      - ENABLE_REALTIME=true
+      
+      # JWT (такой же как в Kotlin core)
+      - JWT_SECRET=bXlfc2VjcmV0X2tleV9mb3Jfand0X3Rva2Vux2dlbmVyYXRpb25fMTIzNDU2Nzg5MA==
+      
+      # Logging
+      - LOG_LEVEL=INFO
+      - LOG_DIR=/app/logs
+      
+      # Security
+      - ENABLE_CORS=true
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:8080
+      - RATE_LIMIT_REQUESTS=1000
+      
+    depends_on:
+      - postgres-analytics-fresh
+      - redis-analytics
+      - clickhouse-analytics
+      - superset-analytics
+    networks:
+      - analytics-network
+    volumes:
+      - analytics-logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana (FREE open-source version)
+  grafana-analytics:
+    image: grafana/grafana-oss:latest
+    container_name: crm-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      # Admin credentials
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      
+      # Security settings
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      
+      # Plugins (все бесплатные)
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel
+      
+      # Database for Grafana settings (SQLite by default)
+      - GF_DATABASE_TYPE=sqlite3
+      
+      # Branding (optional)
+      - GF_SERVER_DOMAIN=localhost
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL для всей системы  
+  postgres-analytics-fresh:
+    image: docker.io/library/postgres:13
+    container_name: analytics-postgres-2025
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=salesforce_clone
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres-analytics-data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d salesforce_clone"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ClickHouse для CRM аналитики
+  clickhouse-analytics:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    container_name: crm-clickhouse
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native interface
+    environment:
+      - CLICKHOUSE_DB=crm_analytics
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_PASSWORD=analytics_password
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-logs:/var/log/clickhouse-server
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 60s
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # Redis for Analytics (отдельный инстанс)
+  redis-analytics:
+    image: redis:7-alpine
+    container_name: crm-redis-analytics
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-analytics-data:/data
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ClickHouse initialization service
+  clickhouse-init:
+    image: curlimages/curl:latest
+    container_name: crm-clickhouse-init
+    depends_on:
+      - clickhouse-analytics
+    environment:
+      - CLICKHOUSE_HOST=clickhouse-analytics
+      - CLICKHOUSE_HTTP_PORT=8123
+      - CLICKHOUSE_TCP_PORT=9000
+    volumes:
+      - ./scripts/init-clickhouse.sh:/init-clickhouse.sh:ro
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - analytics-network
+    command: ["sh", "/init-clickhouse.sh"]
+    restart: "no"
+
+  # ML/AI Service для прогностической аналитики
+  ml-ai-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    ports:
+      - "8007:8007"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '1.0'
+          memory: 512M
+    environment:
+      # ClickHouse подключение (HTTP интерфейс для clickhouse-connect)
+      - CLICKHOUSE_HOST=clickhouse-analytics  
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_USER=analytics
+      - CLICKHOUSE_PASSWORD=analytics_password
+      - CLICKHOUSE_DATABASE=crm_analytics
+      
+      # API настройки
+      - API_HOST=0.0.0.0
+      - API_PORT=8007
+      - API_WORKERS=1
+      - LOG_LEVEL=INFO
+      
+      # Security
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost:8006
+      - RATE_LIMIT_PER_MINUTE=100
+      
+      # ML модели настройки
+      - MODEL_STORAGE_PATH=/app/ml_models
+      - MAX_MODEL_AGE_DAYS=30
+      - DEFAULT_FORECAST_PERIODS=30
+      
+      # Redis для кэширования
+      - REDIS_HOST=redis-analytics
+      - REDIS_PORT=6379
+      - REDIS_DB=4
+      - CACHE_TTL_SECONDS=3600
+      
+      # OpenAI API для Revenue Intelligence
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_key_here}
+      
+    volumes:
+      - ./ml-service/ml_models:/app/ml_models
+      - ./ml-service/logs:/app/logs
+    depends_on:
+      - clickhouse-analytics
+      - redis-analytics
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Apache Superset для CRM дашбордов
+  superset-analytics:
+    image: apache/superset:latest
+    container_name: crm-superset
+    ports:
+      - "8006:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=crm-superset-secret-key-123456789
+      - SUPERSET_CONFIG_PATH=/app/superset_config.py
+      - FLASK_ENV=production
+      
+      # PostgreSQL для Superset метаданных
+      - DATABASE_DB=superset
+      - DATABASE_HOST=postgres-analytics-fresh
+      - DATABASE_PASSWORD=password
+      - DATABASE_USER=postgres
+      - DATABASE_DIALECT=postgresql
+      - DATABASE_PORT=5432
+      
+      # Redis для кэша
+      - REDIS_HOST=redis-analytics
+      - REDIS_PORT=6379
+      - REDIS_CELERY_DB=2
+      - REDIS_RESULTS_DB=3
+      
+    volumes:
+      - ./superset/superset_config.py:/app/superset_config.py
+      - ./superset/dashboards:/app/dashboards
+    depends_on:
+      - postgres-analytics-fresh
+      - redis-analytics
+      - clickhouse-analytics
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8088/health || exit 1"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 120s
+    command: >
+      sh -c "
+      pip install clickhouse-connect psycopg2-binary flask-cors &&
+      superset fab create-admin --username admin --firstname Admin --lastname Admin --email admin@crm.local --password admin123 || echo 'Admin already exists' &&
+      superset db upgrade &&
+      superset init &&
+      superset run -h 0.0.0.0 -p 8088
+      "
+
+  # Automated Backup Service
+  backup-service:
+    build:
+      context: .
+      dockerfile: backup-service/Dockerfile
+    container_name: crm-backup-service
+    environment:
+      - TZ=UTC
+      - BACKUP_WEBHOOK_URL=${BACKUP_WEBHOOK_URL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - backup-data:/app/backups
+      - backup-logs:/app/logs
+    depends_on:
+      - postgres-analytics-fresh
+      - clickhouse-analytics
+    networks:
+      - analytics-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep crond > /dev/null || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Load Balancer with Production Config
+  nginx-analytics:
+    image: nginx:alpine
+    container_name: crm-nginx-analytics
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/load-balancer.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - analytics-service
+      - ml-ai-service
+      - grafana-analytics
+      - superset-analytics
+    networks:
+      - analytics-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    restart: unless-stopped
+
+volumes:
+  postgres-analytics-data:
+    driver: local
+  clickhouse-data:
+    driver: local
+  clickhouse-logs:
+    driver: local
+  grafana-storage:
+    driver: local
+  superset-storage:
+    driver: local
+  redis-analytics-data:
+    driver: local
+  backup-data:
+    driver: local
+  backup-logs:
+    driver: local
+  analytics-logs:
+    driver: local
+
+networks:
+  analytics-network:
+    driver: bridge
+    name: crm-analytics-network
