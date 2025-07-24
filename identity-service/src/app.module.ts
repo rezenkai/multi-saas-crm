@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { Auth0Module } from './auth0/auth0.module';
+import auth0Config from './config/auth0.config';
 import databaseConfig from './config/database.config';
 import { TwoFactorModule } from './two-factor/two-factor.module';
 import { UserModule } from './user/user.module';
@@ -13,7 +15,7 @@ import { UserModule } from './user/user.module';
     // Configuration module
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig],
+      load: [databaseConfig, auth0Config],
       envFilePath: ['.env.local', '.env'],
     }),
 
@@ -34,6 +36,7 @@ import { UserModule } from './user/user.module';
     UserModule,
     AuthModule,
     TwoFactorModule,
+    Auth0Module,
 
     // TODO: Add these modules later
     // AuthModule,

@@ -29,15 +29,26 @@ export class AppService {
       endpoints: {
         health: '/api/v1/health',
         users: '/api/v1/users',
+        auth: '/api/v1/auth',
+        twoFactor: '/api/v1/auth/2fa',
+        auth0: '/api/v1/auth/auth0',
         docs: '/api/v1/docs', // For future Swagger documentation
       },
       features: [
         'User Management',
         'Password Authentication',
         'Two-Factor Authentication (2FA)',
-        'Auth0 Integration',
+        'Auth0 SSO Integration',
+        'Enterprise Connections',
         'JWT Token Management',
+        'Multi-tenant Support',
       ],
+      auth0: {
+        login: '/api/v1/auth/auth0/login',
+        callback: '/api/v1/auth/auth0/callback',
+        logout: '/api/v1/auth/auth0/logout',
+        status: '/api/v1/auth/auth0/status',
+      },
     };
   }
 }
