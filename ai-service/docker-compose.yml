@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Add this to your existing services
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    ports:
+      - '8003:8003'
+    environment:
+      - APP_NAME=AI Service
+      - DEBUG=true
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/salesforce_clone
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - IDENTITY_SERVICE_URL=http://identity-service:3002
+      - CORE_SERVICE_URL=http://core-service:3001
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./ai-service:/app
+    networks:
+      - multi-saas-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8003/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Add pgvector extension to your existing postgres service
+  postgres:
+    # ... your existing postgres config
+    command: |
+      postgres -c shared_preload_libraries=vector

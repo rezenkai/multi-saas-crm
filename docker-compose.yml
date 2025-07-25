@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL база данных
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: salesforce_postgres
     environment:
       POSTGRES_DB: salesforce_clone
