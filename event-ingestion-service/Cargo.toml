@@ -1,0 +1,16 @@
+[package]
+name = "event-ingestion-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tokio-stream = "0.1"
+rdkafka = "0.29"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+clickhouse = "0.11"
+redis = { version = "0.23", features = ["aio", "tokio-comp"] }
+anyhow = "1.0"

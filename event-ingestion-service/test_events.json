@@ -1,0 +1,46 @@
+[
+	{
+		"tenant_id": "tenant_001",
+		"event_type": "user_login",
+		"user_id": "user_123",
+		"timestamp": 1640995200,
+		"payload": {
+			"ip_address": "192.168.1.100",
+			"user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+			"session_duration": 3600
+		}
+	},
+	{
+		"tenant_id": "tenant_001",
+		"event_type": "lead_created",
+		"user_id": "user_456",
+		"timestamp": 1640995260,
+		"payload": {
+			"source": "website",
+			"score": 85.5,
+			"campaign_id": "camp_001"
+		}
+	},
+	{
+		"tenant_id": "tenant_002",
+		"event_type": "deal_updated",
+		"user_id": "user_789",
+		"timestamp": 1640995320,
+		"payload": {
+			"stage": "negotiation",
+			"amount": 50000.0,
+			"probability": 75.0
+		}
+	},
+	{
+		"tenant_id": "tenant_001",
+		"event_type": "email_sent",
+		"user_id": "user_123",
+		"timestamp": 1640995380,
+		"payload": {
+			"campaign_id": "camp_002",
+			"template_id": "temp_001",
+			"recipient_count": 150
+		}
+	}
+]
