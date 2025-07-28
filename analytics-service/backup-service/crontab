@@ -1,0 +1,17 @@
+# Analytics Service Backup Schedule
+# Format: min hour day month weekday command
+
+# PostgreSQL backup - daily at 2:00 AM
+0 2 * * * /app/scripts/backup-postgres.sh >> /app/logs/postgres-backup.log 2>&1
+
+# ClickHouse backup - daily at 3:00 AM  
+0 3 * * * /app/scripts/backup-clickhouse.sh >> /app/logs/clickhouse-backup.log 2>&1
+
+# Weekly backup verification - Sundays at 4:00 AM
+0 4 * * 0 /app/scripts/verify-backups.sh >> /app/logs/backup-verification.log 2>&1
+
+# Cleanup old logs - daily at 1:00 AM
+0 1 * * * find /app/logs -name "*.log" -type f -mtime +30 -delete
+
+# Health check - every 5 minutes (optional monitoring)
+*/5 * * * * echo "$(date): Backup service running" >> /app/logs/health.log
