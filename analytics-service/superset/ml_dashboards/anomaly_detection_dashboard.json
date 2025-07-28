@@ -1,0 +1,221 @@
+{
+  "dashboard_title": "ML Anomaly Detection",
+  "description": "Детекция аномалий в CRM данных с использованием машинного обучения",
+  "charts": [
+    {
+      "slice_name": "Аномалии по типам и времени",
+      "viz_type": "heatmap", 
+      "datasource": "ml_anomalies",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_anomalies"
+        },
+        "queries": [
+          {
+            "columns": ["anomaly_type", "toStartOfHour(detected_at) as hour"],
+            "metrics": [
+              {"label": "Количество аномалий", "column": "id", "aggregate": "COUNT"}
+            ],
+            "row_limit": 5000,
+            "time_range": "7 days ago : now",
+            "filters": [
+              {
+                "col": "is_false_positive", 
+                "op": "==",
+                "val": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "reds",
+        "show_legend": true,
+        "normalize_across": "heatmap"
+      }
+    },
+    {
+      "slice_name": "Критические аномалии",
+      "viz_type": "table",
+      "datasource": "ml_anomalies", 
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_anomalies"
+        },
+        "queries": [
+          {
+            "columns": [
+              "detected_at",
+              "anomaly_type", 
+              "entity_type",
+              "entity_id",
+              "description",
+              "anomaly_score",
+              "resolution_status"
+            ],
+            "row_limit": 100,
+            "time_range": "24 hours ago : now",
+            "order_desc": true,
+            "orderby": [["detected_at", false]],
+            "filters": [
+              {
+                "col": "severity",
+                "op": "IN", 
+                "val": ["high", "critical"]
+              },
+              {
+                "col": "is_false_positive",
+                "op": "==",
+                "val": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "table_timestamp_format": "smart_date",
+        "show_cell_bars": true
+      }
+    },
+    {
+      "slice_name": "Аномалии по уровню критичности",
+      "viz_type": "pie",
+      "datasource": "ml_anomalies",
+      "query_context": {
+        "datasource": {
+          "type": "table", 
+          "id": "ml_anomalies"
+        },
+        "queries": [
+          {
+            "columns": ["severity"],
+            "metrics": [
+              {"label": "Количество", "column": "id", "aggregate": "COUNT"}
+            ],
+            "row_limit": 10,
+            "time_range": "7 days ago : now",
+            "filters": [
+              {
+                "col": "is_false_positive",
+                "op": "==", 
+                "val": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "donut": true,
+        "show_legend": true,
+        "show_labels": true
+      }
+    },
+    {
+      "slice_name": "Тренд аномалий по дням",
+      "viz_type": "line",
+      "datasource": "ml_anomalies",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_anomalies" 
+        },
+        "queries": [
+          {
+            "columns": ["toDate(detected_at) as date"],
+            "metrics": [
+              {"label": "Всего аномалий", "column": "id", "aggregate": "COUNT"},
+              {"label": "Критические", "column": "id", "aggregate": "COUNT", "filters": [{"col": "severity", "op": "==", "val": "critical"}]},
+              {"label": "Высокие", "column": "id", "aggregate": "COUNT", "filters": [{"col": "severity", "op": "==", "val": "high"}]}
+            ],
+            "row_limit": 30,
+            "time_range": "30 days ago : now",
+            "order_desc": false,
+            "filters": [
+              {
+                "col": "is_false_positive",
+                "op": "==",
+                "val": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "line_interpolation": "linear",
+        "show_markers": true
+      }
+    }
+  ],
+  "layout": {
+    "CHART-1": {
+      "children": [],
+      "id": "CHART-1",
+      "meta": {"chartId": 1, "height": 400, "width": 8},
+      "type": "CHART"
+    },
+    "CHART-2": {
+      "children": [],
+      "id": "CHART-2",
+      "meta": {"chartId": 2, "height": 400, "width": 4}, 
+      "type": "CHART"
+    },
+    "CHART-3": {
+      "children": [],
+      "id": "CHART-3", 
+      "meta": {"chartId": 3, "height": 300, "width": 6},
+      "type": "CHART"
+    },
+    "CHART-4": {
+      "children": [],
+      "id": "CHART-4",
+      "meta": {"chartId": 4, "height": 300, "width": 6},
+      "type": "CHART"
+    },
+    "DASHBOARD_VERSION_KEY": "v2",
+    "GRID_ID": {
+      "children": ["ROW-1", "ROW-2", "CHART-2"],
+      "id": "GRID_ID",
+      "type": "GRID"
+    },
+    "HEADER_ID": {
+      "id": "HEADER_ID",
+      "meta": {"text": "ML Anomaly Detection Dashboard"}, 
+      "type": "HEADER"
+    },
+    "ROOT_ID": {
+      "children": ["GRID_ID"],
+      "id": "ROOT_ID",
+      "type": "ROOT"
+    },
+    "ROW-1": {
+      "children": ["CHART-1"],
+      "id": "ROW-1",
+      "meta": {"background": "BACKGROUND_TRANSPARENT"},
+      "type": "ROW"
+    },
+    "ROW-2": {
+      "children": ["CHART-3", "CHART-4"],
+      "id": "ROW-2", 
+      "meta": {"background": "BACKGROUND_TRANSPARENT"},
+      "type": "ROW"
+    }
+  },
+  "metadata": {
+    "color_scheme": "supersetColors",
+    "refresh_frequency": 60,
+    "timed_refresh_immune_slices": [],
+    "expanded_slices": {},
+    "label_colors": {
+      "critical": "#d62728",
+      "high": "#ff7f0e", 
+      "medium": "#2ca02c",
+      "low": "#1f77b4"
+    },
+    "shared_label_colors": {}
+  }
+}

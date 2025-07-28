@@ -1,0 +1,262 @@
+{
+  "dashboard_title": "ML Churn Prediction", 
+  "description": "Предсказание оттока клиентов с использованием машинного обучения",
+  "charts": [
+    {
+      "slice_name": "Клиенты в группе риска", 
+      "viz_type": "table",
+      "datasource": "ml_churn_predictions",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_churn_predictions"
+        },
+        "queries": [
+          {
+            "columns": [
+              "company_name",
+              "churn_probability", 
+              "churn_risk_level",
+              "days_to_churn",
+              "customer_lifetime_value",
+              "retention_recommendations"
+            ],
+            "row_limit": 100,
+            "time_range": "today : today",
+            "order_desc": true,
+            "orderby": [["churn_probability", false]],
+            "filters": [
+              {
+                "col": "churn_risk_level",
+                "op": "IN",
+                "val": ["high", "critical"]
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "table_timestamp_format": "smart_date",
+        "show_cell_bars": true,
+        "conditional_formatting": [
+          {
+            "column": "churn_probability",
+            "operator": ">",
+            "targetValue": 0.7,
+            "colorScheme": "#d62728"
+          },
+          {
+            "column": "churn_probability", 
+            "operator": ">",
+            "targetValue": 0.5,
+            "colorScheme": "#ff7f0e"
+          }
+        ]
+      }
+    },
+    {
+      "slice_name": "Распределение рисков оттока",
+      "viz_type": "pie",
+      "datasource": "ml_churn_predictions",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_churn_predictions"
+        },
+        "queries": [
+          {
+            "columns": ["churn_risk_level"],
+            "metrics": [
+              {"label": "Количество клиентов", "column": "customer_id", "aggregate": "COUNT_DISTINCT"}
+            ],
+            "row_limit": 10,
+            "time_range": "today : today"
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "bnbColors",
+        "donut": true,
+        "show_legend": true,
+        "show_labels": true,
+        "label_type": "percent"
+      }
+    },
+    {
+      "slice_name": "Потенциальные потери CLV",
+      "viz_type": "bar",
+      "datasource": "ml_churn_predictions", 
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_churn_predictions"
+        },
+        "queries": [
+          {
+            "columns": ["churn_risk_level"],
+            "metrics": [
+              {"label": "Общий CLV", "column": "customer_lifetime_value", "aggregate": "SUM"}
+            ],
+            "row_limit": 10,
+            "time_range": "today : today",
+            "filters": [
+              {
+                "col": "churn_risk_level",
+                "op": "IN", 
+                "val": ["medium", "high", "critical"]
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "show_legend": false,
+        "rich_tooltip": true,
+        "y_axis_format": "$,.0f"
+      }
+    },
+    {
+      "slice_name": "Прогноз оттока по времени",
+      "viz_type": "line",
+      "datasource": "ml_churn_predictions",
+      "query_context": {
+        "datasource": {
+          "type": "table", 
+          "id": "ml_churn_predictions"
+        },
+        "queries": [
+          {
+            "columns": ["days_to_churn"],
+            "metrics": [
+              {"label": "Количество клиентов", "column": "customer_id", "aggregate": "COUNT"}
+            ],
+            "row_limit": 90,
+            "time_range": "today : today",
+            "filters": [
+              {
+                "col": "days_to_churn",
+                "op": "<=",
+                "val": "90"
+              },
+              {
+                "col": "churn_risk_level",
+                "op": "IN",
+                "val": ["medium", "high", "critical"] 
+              }
+            ],
+            "order_desc": false,
+            "orderby": [["days_to_churn", true]]
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "show_legend": true,
+        "line_interpolation": "linear",
+        "show_markers": true,
+        "rich_tooltip": true
+      }
+    },
+    {
+      "slice_name": "Топ факторы риска",
+      "viz_type": "word_cloud",
+      "datasource": "ml_churn_predictions",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_churn_predictions"
+        },
+        "queries": [
+          {
+            "columns": ["arrayJoin(key_risk_factors) as risk_factor"],
+            "metrics": [
+              {"label": "Частота", "column": "customer_id", "aggregate": "COUNT"}
+            ],
+            "row_limit": 50,
+            "time_range": "7 days ago : today",
+            "filters": [
+              {
+                "col": "churn_risk_level",
+                "op": "IN",
+                "val": ["high", "critical"]
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "size_from": 20,
+        "size_to": 60
+      }
+    }
+  ],
+  "layout": {
+    "CHART-1": {
+      "children": [],
+      "id": "CHART-1",
+      "meta": {"chartId": 1, "height": 400, "width": 12},
+      "type": "CHART"
+    },
+    "CHART-2": {
+      "children": [],
+      "id": "CHART-2",
+      "meta": {"chartId": 2, "height": 300, "width": 4},
+      "type": "CHART"
+    },
+    "CHART-3": {
+      "children": [],
+      "id": "CHART-3", 
+      "meta": {"chartId": 3, "height": 300, "width": 4},
+      "type": "CHART"
+    },
+    "CHART-4": {
+      "children": [],
+      "id": "CHART-4",
+      "meta": {"chartId": 4, "height": 300, "width": 4},
+      "type": "CHART"
+    },
+    "CHART-5": {
+      "children": [],
+      "id": "CHART-5",
+      "meta": {"chartId": 5, "height": 250, "width": 12},
+      "type": "CHART"
+    },
+    "DASHBOARD_VERSION_KEY": "v2",
+    "GRID_ID": {
+      "children": ["CHART-1", "ROW-1", "CHART-5"],
+      "id": "GRID_ID",
+      "type": "GRID"
+    },
+    "HEADER_ID": {
+      "id": "HEADER_ID",
+      "meta": {"text": "ML Churn Prediction Dashboard"},
+      "type": "HEADER"
+    },
+    "ROOT_ID": {
+      "children": ["GRID_ID"],
+      "id": "ROOT_ID", 
+      "type": "ROOT"
+    },
+    "ROW-1": {
+      "children": ["CHART-2", "CHART-3", "CHART-4"],
+      "id": "ROW-1",
+      "meta": {"background": "BACKGROUND_TRANSPARENT"},
+      "type": "ROW"
+    }
+  },
+  "metadata": {
+    "color_scheme": "supersetColors",
+    "refresh_frequency": 3600,
+    "timed_refresh_immune_slices": [],
+    "expanded_slices": {},
+    "label_colors": {
+      "low": "#2ca02c",
+      "medium": "#1f77b4", 
+      "high": "#ff7f0e",
+      "critical": "#d62728"
+    },
+    "shared_label_colors": {}
+  }
+}

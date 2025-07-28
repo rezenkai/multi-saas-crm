@@ -1,0 +1,71 @@
+# Grafana DataSource configuration for Analytics
+apiVersion: 1
+
+deleteDatasources:
+  - name: CRM Analytics
+    orgId: 1
+
+datasources:
+  # Primary PostgreSQL connection для CRM Analytics
+  - name: CRM Analytics
+    type: postgres
+    access: proxy
+    orgId: 1
+    url: host.docker.internal:5432
+    database: salesforce_clone
+    user: postgres
+    isDefault: true
+    secureJsonData:
+      password: 'password'
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 100
+      maxIdleConns: 100
+      connMaxLifetime: 14400
+      postgresVersion: 1300  # PostgreSQL 13+
+      timescaledb: false
+    version: 1
+    editable: true
+    
+  # Secondary connection для read-only queries (optional)
+  - name: CRM Analytics (Read-Only)
+    type: postgres
+    access: proxy
+    orgId: 1
+    url: host.docker.internal:5432
+    database: salesforce_clone
+    user: postgres  # В production лучше использовать read-only пользователя
+    secureJsonData:
+      password: 'password'
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 50
+      maxIdleConns: 25
+      connMaxLifetime: 14400
+      postgresVersion: 1300
+      timescaledb: false
+    version: 1
+    editable: false
+
+  # Redis datasource (если нужен для мониторинга Redis)
+  - name: Redis Analytics
+    type: redis-datasource
+    access: proxy
+    orgId: 1
+    url: redis-analytics:6379
+    jsonData:
+      client: cluster
+      poolSize: 5
+      timeout: 10
+      pingInterval: 0
+      pipelineWindow: 0
+    version: 1
+    editable: false
+
+  # TestData source для демо-дашбордов
+  - name: TestData DB
+    type: testdata
+    access: proxy
+    orgId: 1
+    version: 1
+    editable: false

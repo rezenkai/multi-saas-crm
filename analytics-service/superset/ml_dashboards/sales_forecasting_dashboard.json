@@ -1,0 +1,148 @@
+{
+  "dashboard_title": "ML Sales Forecasting",
+  "description": "Прогнозирование продаж с использованием машинного обучения",
+  "charts": [
+    {
+      "slice_name": "Прогноз продаж на 30 дней",
+      "viz_type": "line",
+      "datasource": "ml_sales_forecasts",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_sales_forecasts"
+        },
+        "queries": [
+          {
+            "columns": ["forecast_date"],
+            "metrics": [
+              {"label": "Прогноз продаж", "column": "predicted_sales_amount"},
+              {"label": "Нижняя граница", "column": "confidence_lower"},
+              {"label": "Верхняя граница", "column": "confidence_upper"}
+            ],
+            "row_limit": 1000,
+            "time_range": "30 days ago : now",
+            "order_desc": false,
+            "filters": [
+              {
+                "col": "forecast_horizon_days",
+                "op": "<=",
+                "val": "30"
+              }
+            ]
+          }
+        ]
+      },
+      "params": {
+        "rich_tooltip": true,
+        "show_legend": true,
+        "line_interpolation": "linear",
+        "show_markers": false,
+        "y_axis_format": ",.0f",
+        "color_scheme": "supersetColors"
+      }
+    },
+    {
+      "slice_name": "Точность прогнозов по моделям",
+      "viz_type": "bar",
+      "datasource": "ml_sales_forecasts",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_sales_forecasts"
+        },
+        "queries": [
+          {
+            "columns": ["model_name"],
+            "metrics": [
+              {"label": "Средняя точность", "column": "accuracy_score", "aggregate": "AVG"}
+            ],
+            "row_limit": 50,
+            "time_range": "7 days ago : now"
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "show_legend": false,
+        "rich_tooltip": true
+      }
+    },
+    {
+      "slice_name": "Прогноз количества сделок",
+      "viz_type": "area",
+      "datasource": "ml_sales_forecasts",
+      "query_context": {
+        "datasource": {
+          "type": "table",
+          "id": "ml_sales_forecasts"
+        },
+        "queries": [
+          {
+            "columns": ["forecast_date"],
+            "metrics": [
+              {"label": "Прогноз сделок", "column": "predicted_deals_count"}
+            ],
+            "row_limit": 365,
+            "time_range": "30 days ago : 30 days",
+            "order_desc": false
+          }
+        ]
+      },
+      "params": {
+        "color_scheme": "supersetColors",
+        "opacity": 0.7,
+        "show_legend": true
+      }
+    }
+  ],
+  "layout": {
+    "CHART-1": {
+      "children": [],
+      "id": "CHART-1",
+      "meta": {"chartId": 1, "height": 300, "width": 12},
+      "type": "CHART"
+    },
+    "CHART-2": {
+      "children": [],
+      "id": "CHART-2", 
+      "meta": {"chartId": 2, "height": 250, "width": 6},
+      "type": "CHART"
+    },
+    "CHART-3": {
+      "children": [],
+      "id": "CHART-3",
+      "meta": {"chartId": 3, "height": 250, "width": 6},
+      "type": "CHART"
+    },
+    "DASHBOARD_VERSION_KEY": "v2",
+    "GRID_ID": {
+      "children": ["CHART-1", "ROW-1"],
+      "id": "GRID_ID",
+      "type": "GRID"
+    },
+    "HEADER_ID": {
+      "id": "HEADER_ID",
+      "meta": {"text": "ML Sales Forecasting Dashboard"},
+      "type": "HEADER"
+    },
+    "ROOT_ID": {
+      "children": ["GRID_ID"],
+      "id": "ROOT_ID",
+      "type": "ROOT"
+    },
+    "ROW-1": {
+      "children": ["CHART-2", "CHART-3"],
+      "id": "ROW-1",
+      "meta": {"background": "BACKGROUND_TRANSPARENT"},
+      "type": "ROW"
+    }
+  },
+  "metadata": {
+    "color_scheme": "supersetColors",
+    "refresh_frequency": 300,
+    "timed_refresh_immune_slices": [],
+    "expanded_slices": {},
+    "label_colors": {},
+    "shared_label_colors": {}
+  }
+}
