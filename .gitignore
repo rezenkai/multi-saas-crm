@@ -196,3 +196,5 @@ PROGRESS.md
 migration_plan.md
 analytics-service/ml-service/ml_models/
 event-ingestion-service/target
+extension-runtime-service/target
+wasm_test/target

@@ -1,0 +1,17 @@
+[package]
+name = "extension-runtime-service"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0"
+metrics = "0.22"
+prometheus = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+warp = "0.3"
+wasmtime = "15.0"
+wasmtime-wasi = "15.0"
